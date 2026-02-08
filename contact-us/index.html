@@ -10,6 +10,65 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Crimson+Pro:wght@300;400;600&family=Bebas+Neue&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+
+        .submit-btn {
+            position: relative;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .spinner-small {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <nav id="navbar">
@@ -23,7 +82,7 @@
                 <li><a href="/pastor-melusi.org/gallery/">Gallery</a></li>
                 <li><a href="/pastor-melusi.org/contact-us/">Contact</a></li>
             </ul>
-            <a href="/pastormelusi.org/contact-us" class="contact-btn">Get In Touch</a>
+            <a href="/pastor-melusi.org/contact-us/" class="contact-btn">Get In Touch</a>
             <div class="mobile-toggle" id="mobileToggle">
                 <span></span>
                 <span></span>
@@ -78,6 +137,11 @@
             
             <div class="reveal">
                 <h2 style="font-family: 'Playfair Display', serif; font-size: 3.5rem; font-weight: 900; margin-bottom: 2rem;">Send Us a Message</h2>
+                
+                <!-- Alert Messages -->
+                <div id="alertSuccess" class="alert alert-success"></div>
+                <div id="alertError" class="alert alert-error"></div>
+                
                 <form id="contactForm">
                     <div class="form-group">
                         <label for="name">Your Name *</label>
@@ -90,16 +154,23 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="subject">Subject</label>
-                        <input type="text" id="subject" name="subject">
+                        <label for="phone">Phone Number (Optional)</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subject">Subject *</label>
+                        <input type="text" id="subject" name="subject" required placeholder="What is your message about?">
                     </div>
                     
                     <div class="form-group">
                         <label for="message">Your Message *</label>
-                        <textarea id="message" name="message" required></textarea>
+                        <textarea id="message" name="message" required placeholder="Share your prayer request, question, or message..."></textarea>
                     </div>
                     
-                    <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">Send Message</button>
+                    <button type="submit" class="btn-primary submit-btn" id="submitBtn" style="width: 100%; margin-top: 1rem;">
+                        Send Message
+                    </button>
                 </form>
             </div>
         </div>
@@ -138,5 +209,75 @@
     </footer>
 
     <script src="main.js"></script>
+    
+    <script>
+        // CONFIGURATION - REPLACE WITH YOUR GOOGLE APPS SCRIPT WEB APP URL
+        const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+
+        // Handle form submission
+        document.getElementById('contactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Sending... <span class="spinner-small"></span>';
+            
+            // Gather form data
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                subject: document.getElementById('subject').value.trim(),
+                message: document.getElementById('message').value.trim(),
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                // Send to Google Apps Script
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Important for Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                // Show success message
+                showAlert('success', '✓ Message sent successfully! Pastor Melusi will respond to you via email soon.');
+                
+                // Reset form
+                document.getElementById('contactForm').reset();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('error', '✗ There was an error sending your message. Please try again or email us directly at info@pastormelusi.org');
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+
+        // Show alert function
+        function showAlert(type, message) {
+            const alertId = type === 'success' ? 'alertSuccess' : 'alertError';
+            const alertDiv = document.getElementById(alertId);
+            
+            alertDiv.textContent = message;
+            alertDiv.style.display = 'block';
+            
+            // Scroll to alert
+            alertDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 8000);
+        }
+    </script>
 </body>
 </html>
